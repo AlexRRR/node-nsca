@@ -1,5 +1,6 @@
 var net = require('net');
 var crc32 = require('buffer-crc32');
+var Crypter = require('./Crypter');
 var HOST = 'localhost';
 var PORT = 8667;
 
@@ -11,7 +12,7 @@ function Notifier(host, port, secret) {
 };
 
 
-Notifier.prototype.send = function(hostName, serviceDesc, returnCode, pluginOutput) {
+Notifier.prototype.send = function(hostName, serviceDesc, returnCode, pluginOutput, encryption) {
 
     var PACKET_VERSION = 3;
     var MSG_LENGTH = 720;
@@ -26,10 +27,11 @@ Notifier.prototype.send = function(hostName, serviceDesc, returnCode, pluginOutp
     client.on('data', function(data) {
         console.log('DATA' + data.length);
         var inBuffer = new Buffer(data);
-        var outBuffer = new Buffer(MSG_LENGTH);
+        var iv = inBuffer.read(0,127);
         var timestamp = inBuffer.readInt32BE(128);
         
         //header//
+        var outBuffer = new Buffer(MSG_LENGTH);
         outBuffer.writeInt16BE(PACKET_VERSION, 0); //packet version 
         outBuffer.fill("h", 2, 3); //filling
         outBuffer.writeUInt32BE(0, 4); // initial 0 for CRC32 value
@@ -39,6 +41,11 @@ Notifier.prototype.send = function(hostName, serviceDesc, returnCode, pluginOutp
         outBuffer.write(serviceDesc, 78, 206); //128 
         outBuffer.write(pluginOutput, 206, 720);
         outBuffer.writeUInt32BE(crc32.unsigned(outBuffer), 4);
+
+        if encryption {
+            var encrypter = new Crypter(encryption, this.secret, iv);
+            outBuffer = encrypter.encode(outBuffer);
+        }
 
 
         client.write(outBuffer, function(a) {
@@ -55,57 +62,6 @@ Notifier.prototype.send = function(hostName, serviceDesc, returnCode, pluginOutp
 
 }
 
-///in development
-Notifier.prototype.xorEnc = function(value, pass, iv) {
 
-    String.prototype.repeat = function(n) {
-        var str = '';
-        for (var i = 0; i < n; i++) {
-            str += this;
-        }
-        return str;
-    };
-
-    function repeatString(toExtend, base) {
-        var timesToRepeat = Math.ceil(base.length / toExtend.length);
-        return toExtend.repeat(timesToRepeat);
-    };
-
-
-    function charArray(value) {
-        var map = Array.prototype.map;
-        var chars = map.call(value, function(x) {
-            return x.charCodeAt(0);
-        });
-        return chars;
-    };
-
-    function joinCharCodes(a) {
-        var finalstring = "";
-        a.map(function(x){
-            finalstring = finalstring + String.fromCharCode(x);
-        })
-        return finalstring;
-    }
-
-    function xorArrays(a, b){
-        var result = [];
-        for (var i = 0; i < a.length; i++) {
-            result[i] = a[i] ^ b[i];
-        }
-        return result;
-    };
-
-    var valueChars = charArray(value);
-    var repeatedPassChars = charArray(repeatString(pass, value));
-    var repeatedIVChars = charArray(repeatString(iv, value));
-
-    var pre = xorArrays(valueChars, repeatedIVChars);
-    var post = xorArrays(pre, repeatedPassChars);
-
-    return  joinCharCodes(post);
-
-
-};
 
 module.exports = Notifier;
