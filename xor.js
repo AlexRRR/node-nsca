@@ -14,7 +14,8 @@ XorEncoder.prototype.open = function(key, iv){
 
 
 XorEncoder.prototype.encrypt = function(buffer) {
-	var value = buffer.toString();
+    var encoding = 'binary'
+	var value = buffer.toString(encoding);
     String.prototype.repeat = function(n) {
         var str = '';
         for (var i = 0; i < n; i++) {
@@ -38,11 +39,12 @@ XorEncoder.prototype.encrypt = function(buffer) {
     };
 
     function joinCharCodes(a) {
-        var finalstring = "";
-        a.map(function(x){
-            finalstring = finalstring + String.fromCharCode(x);
-        })
-        return finalstring;
+        // var finalstring = "";
+        // a.map(function(x){
+        //     finalstring = finalstring + String.fromCharCode(x);
+        // })
+        var b = new Buffer(a,encoding);
+        return b;
     }
 
     function xorArrays(a, b){
