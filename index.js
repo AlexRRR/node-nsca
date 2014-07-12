@@ -5,14 +5,15 @@ var HOST = 'localhost';
 var PORT = 8667;
 
 
-function Notifier(host, port, secret) {
+function Notifier(host, port, secret, encryption) {
     this.host = host;
     this.port = port;
     this.secret = secret;
+    this.encryption = encryption;
 };
 
 
-Notifier.prototype.send = function(hostName, serviceDesc, returnCode, pluginOutput, encryption) {
+Notifier.prototype.send = function(hostName, serviceDesc, returnCode, pluginOutput) {
 
     var PACKET_VERSION = 3;
     var MSG_LENGTH = 720;
@@ -44,8 +45,8 @@ Notifier.prototype.send = function(hostName, serviceDesc, returnCode, pluginOutp
         outBuffer.write(pluginOutput, 206, 720, encoding);
         outBuffer.writeUInt32BE(crc32.unsigned(outBuffer), 4);
 
-        if (encryption) {
-            var encrypter = new Crypter(encryption, this.secret, iv);
+        if (this.encryption) {
+            var encrypter = new Crypter(this.encryption, this.secret, iv);
             outBuffer = encrypter.encode(outBuffer);
         }
 
