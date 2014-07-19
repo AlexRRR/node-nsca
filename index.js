@@ -13,7 +13,8 @@ function Notifier(host, port, secret, encryption) {
 };
 
 
-Notifier.prototype.send = function(hostName, serviceDesc, returnCode, pluginOutput) {
+Notifier.prototype.send = function(hostName, serviceDesc, returnCode, pluginOutput, next) {
+
 
     var PACKET_VERSION = 3;
     var MSG_LENGTH = 720;
@@ -31,17 +32,17 @@ Notifier.prototype.send = function(hostName, serviceDesc, returnCode, pluginOutp
         var inBuffer = new Buffer(data);
         var iv = inBuffer.toString(encoding,0,128);
         var timestamp = inBuffer.readInt32BE(128);
-        
+
         //header//
         var outBuffer = new Buffer(MSG_LENGTH);
         outBuffer.fill(0);
-        outBuffer.writeInt16BE(PACKET_VERSION, 0); //packet version 
+        outBuffer.writeInt16BE(PACKET_VERSION, 0); //packet version
         outBuffer.fill("h", 2, 3); //filling
         outBuffer.writeUInt32BE(0, 4); // initial 0 for CRC32 value
         outBuffer.writeUInt32BE(timestamp, 8); //timestamp
         outBuffer.writeInt16BE(returnCode, 12); //returncode
         outBuffer.write(hostName, 14, 77, encoding); // 64
-        outBuffer.write(serviceDesc, 78, 206, encoding); //128 
+        outBuffer.write(serviceDesc, 78, 206, encoding); //128
         outBuffer.write(pluginOutput, 206, 720, encoding);
         outBuffer.writeUInt32BE(crc32.unsigned(outBuffer), 4);
 
@@ -60,8 +61,14 @@ Notifier.prototype.send = function(hostName, serviceDesc, returnCode, pluginOutp
     }.bind(this));
 
     client.on('close', function() {
-        //console.log('Connection closed');
-    });
+        //no errors, lets go!
+        next(null,"All good");
+    }.bind(this));
+
+    client.on('error', function(e){
+      var err = new Error("what the hell!");
+      next(err);
+    }.bind(this));
 
 }
 
