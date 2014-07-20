@@ -13,7 +13,7 @@ function Notifier(host, port, secret, encryption) {
 };
 
 
-Notifier.prototype.send = function(hostName, serviceDesc, returnCode, pluginOutput, next) {
+Notifier.prototype.send = function(hostName, serviceDesc, returnCode, pluginOutput, callback) {
 
 
     var PACKET_VERSION = 3;
@@ -62,12 +62,12 @@ Notifier.prototype.send = function(hostName, serviceDesc, returnCode, pluginOutp
 
     client.on('close', function() {
         //no errors, lets go!
-        next(null,"All good");
+        callback(null);
     }.bind(this));
 
     client.on('error', function(e){
-      var err = new Error("what the hell!");
-      next(err);
+      var err = new Error("NSCA server connection failed!");
+      callback(err);
     }.bind(this));
 
 }
